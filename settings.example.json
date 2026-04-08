@@ -1,0 +1,77 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch",
+      "WebSearch"
+    ]
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "effortLevel": "high",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh running UserPromptSubmit",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh running PreToolUse",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh running PostToolUse",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh done Stop"
+          }
+        ]
+      }
+    ],
+"PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh waiting PermissionRequest"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh waiting StopFailure"
+          }
+        ]
+      }
+    ]
+  }
+}
