@@ -4,3 +4,4 @@ light.log
 .serial.lock
 .last_session
 .session_map
+.group_state

@@ -32,9 +32,10 @@ sleep 2
 echo $$ > "$PID_FILE"
 echo "Serial daemon ready (PID $$)"
 
+# Open FIFO for read+write to prevent EOF when no writers
+exec 4<>"$FIFO"
+
 # Read commands from FIFO and forward to Arduino
-while true; do
-  if read -r cmd < "$FIFO"; then
-    echo -n "$cmd" >&3
-  fi
+while read -r cmd <&4; do
+  echo -n "$cmd" >&3
 done

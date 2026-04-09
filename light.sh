@@ -9,7 +9,7 @@ MAP_FILE="$SCRIPT_DIR/.session_map"
 LAST_SESSION_FILE="$SCRIPT_DIR/.last_session"
 FIFO="$SCRIPT_DIR/.serial_fifo"
 
-log() { [ "${AGENT_LIGHT_DEBUG:-}" = "1" ] && echo "$(date '+%H:%M:%S') $*" >> "$SCRIPT_DIR/light.log"; }
+log() { [ "${AGENT_LIGHT_DEBUG:-}" = "1" ] && echo "$(date '+%m-%d %H:%M:%S') $*" >> "$SCRIPT_DIR/light.log"; }
 
 STATUS="${1:-}"
 EVENT="${2:-direct}"
@@ -61,6 +61,16 @@ case "$STATUS" in
 esac
 
 log "[G$GROUP] $ICON $LABEL ($STATUS) [$EVENT] sid=${SESSION_ID:0:8}"
+
+# Update state file (always, for software simulation)
+STATE_FILE="$SCRIPT_DIR/.group_state"
+touch "$STATE_FILE"
+# Atomic update: replace the line for this group
+if grep -q "^$GROUP:" "$STATE_FILE" 2>/dev/null; then
+  sed -i'' "s/^$GROUP:.*/$GROUP:$CMD:$STATUS:$EVENT:$(date '+%m-%d %H:%M:%S'):${SESSION_ID:0:8}/" "$STATE_FILE"
+else
+  echo "$GROUP:$CMD:$STATUS:$EVENT:$(date '+%m-%d %H:%M:%S'):${SESSION_ID:0:8}" >> "$STATE_FILE"
+fi
 
 # Send to Arduino via FIFO: group number + command
 if [ -p "$FIFO" ]; then
