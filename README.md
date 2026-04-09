@@ -1,6 +1,6 @@
 # Agent Light
 
-Physical LED status light for Claude Code. Shows what Claude is doing in real-time using an Arduino UNO and LEDs.
+Physical LED status light for Claude Code. Shows what Claude is doing in real-time using an Arduino and LEDs.
 
 ```
 🔴 Red    = Running (processing / using tools)
@@ -13,7 +13,7 @@ Supports up to 4 concurrent sessions, each with its own LED group.
 ## Hardware
 
 - Arduino UNO R3 (ELEGOO compatible)
-- 12x LEDs (4 groups × 3 colors: red, yellow, green)
+- 12x LEDs (4 groups x 3 colors: red, yellow, green)
 - 12x 220Ω resistors
 - Breadboard + jumper wires
 
@@ -30,23 +30,36 @@ All LED short legs share a common GND rail.
 
 ## Setup
 
-### 1. Flash the Arduino
+### 1. Clone and enter the repo
 
 ```bash
-brew install arduino-cli
+git clone https://github.com/peiwenshen/agent-light.git
+cd agent-light
+```
+
+### 2. Flash the Arduino
+
+**macOS / Linux:**
+
+```bash
+brew install arduino-cli        # macOS
+# sudo apt install arduino-cli  # Ubuntu/Debian/WSL
 arduino-cli core install arduino:avr
 arduino-cli compile --fqbn arduino:avr:uno arduino/agent_light
-arduino-cli upload -p /dev/cu.usbmodem1101 --fqbn arduino:avr:uno arduino/agent_light
+arduino-cli upload -p $(ls /dev/cu.usbmodem* /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | head -1) --fqbn arduino:avr:uno arduino/agent_light
 ```
 
-### 2. Configure Claude Code hooks
+**WSL note:** WSL does not see USB devices by default. You need [usbipd-win](https://github.com/dorssel/usbipd-win) to attach the Arduino:
 
-Copy the hook config into your Claude Code settings:
-
-```bash
-cat settings.example.json
-# Copy the "hooks" section into ~/.claude/settings.json
+```powershell
+# In PowerShell (as admin):
+winget install usbipd
+usbipd list                    # Find the Arduino bus ID
+usbipd bind --busid <BUS_ID>
+usbipd attach --wsl --busid <BUS_ID>
 ```
+
+Then in WSL the Arduino appears at `/dev/ttyACM0`.
 
 ### 3. Start the serial daemon
 
@@ -58,19 +71,101 @@ The daemon keeps the serial port open so commands are instant (no 2s Arduino res
 nohup ./serial_daemon.sh > /dev/null 2>&1 &
 ```
 
-### 4. Register sessions
+The serial port is auto-detected. To override: `SERIAL_PORT=/dev/ttyACM0 ./serial_daemon.sh`
 
-Each Claude Code session can be assigned to an LED group (1-4):
+### 4. Configure Claude Code hooks
 
-```bash
-# In Claude Code session A, send any message first, then:
-./register.sh 1    # Assign to Group 1
+Add the following hooks to your Claude Code settings (`~/.claude/settings.json`). Replace `AGENT_LIGHT_DIR` with the absolute path to this repo (e.g., `/home/you/agent-light`).
 
-# In Claude Code session B, send any message first, then:
-./register.sh 2    # Assign to Group 2
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AGENT_LIGHT_DIR/light.sh running UserPromptSubmit",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AGENT_LIGHT_DIR/light.sh running PreToolUse",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AGENT_LIGHT_DIR/light.sh running PostToolUse",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AGENT_LIGHT_DIR/light.sh done Stop"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AGENT_LIGHT_DIR/light.sh waiting PermissionRequest"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AGENT_LIGHT_DIR/light.sh waiting StopFailure"
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
-Unregistered sessions default to Group 1.
+### 5. Register sessions
+
+Each Claude Code session must be registered to an LED group (1-4). Unregistered sessions are ignored.
+
+In a Claude Code session, send any message first (so the session ID is captured), then:
+
+```bash
+./register.sh 1    # Assign to Group 1
+```
+
+### 6. Install the `/register` skill (optional)
+
+A Claude Code skill is included so you can register with `/register <1-4>` instead of running the script manually.
+
+```bash
+ln -s "$(pwd)/skill/register" ~/.claude/skills/register
+```
 
 ## How it works
 
@@ -78,8 +173,8 @@ Unregistered sessions default to Group 1.
 Claude Code hook → light.sh → FIFO → serial_daemon.sh → Arduino → LED
 ```
 
-1. Claude Code fires a hook event (e.g. `PreToolUse`)
-2. `light.sh` reads the `session_id` from stdin JSON, looks up the LED group, and writes a 2-char command (e.g. `1R`) to a named pipe
+1. Claude Code fires a hook event (e.g., `PreToolUse`)
+2. `light.sh` reads the `session_id` from stdin JSON, looks up the LED group, and writes a 2-char command (e.g., `1R`) to a named pipe
 3. `serial_daemon.sh` forwards the command to the Arduino over USB serial
 4. Arduino sets the correct LED in the correct group
 
@@ -92,19 +187,10 @@ Claude Code hook → light.sh → FIFO → serial_daemon.sh → Arduino → LED
 | `register.sh` | Assigns a session to an LED group |
 | `arduino/agent_light/` | Arduino sketch (serial → LED control) |
 | `arduino/test_leds/` | Hardware test sketch (cycles all 12 LEDs) |
-| `settings.example.json` | Claude Code hook configuration |
+| `settings.example.json` | Claude Code hook configuration (reference) |
+| `skill/register/` | Claude Code `/register` skill |
 | `status.sh` | Terminal UI status display |
 | `watch.sh` | Simple log tail |
-
-## Skill (optional)
-
-A Claude Code skill is included so you can register sessions with `/register <1-4>` instead of running the script manually.
-
-To install, symlink it into your skills directory:
-
-```bash
-ln -s "$(pwd)/skill/register" ~/.claude/skills/register
-```
 
 ## Debugging
 
@@ -118,3 +204,15 @@ echo "2G" > .serial_fifo   # Group 2 green
 echo "3Y" > .serial_fifo   # Group 3 yellow
 echo "4O" > .serial_fifo   # Group 4 off
 ```
+
+## Troubleshooting
+
+**Light stuck on a color:** The `Stop` hook didn't fire (session crashed or timed out). Manually clear it:
+
+```bash
+echo "1O" > .serial_fifo   # Replace 1 with your group number
+```
+
+**Serial port not found:** Check that the Arduino is plugged in. On WSL, make sure you've attached the USB device with `usbipd`. You can override the port: `SERIAL_PORT=/dev/ttyACM0 ./serial_daemon.sh`
+
+**Commands are slow (2s delay):** The serial daemon isn't running. Start it with `./serial_daemon.sh` — it keeps the port open to avoid Arduino reset delays.
