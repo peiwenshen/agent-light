@@ -4,7 +4,14 @@
 
 SCRIPT_DIR="$(dirname "$0")"
 FIFO="$SCRIPT_DIR/.serial_fifo"
-SERIAL_PORT="/dev/cu.usbmodem1101"
+# Auto-detect serial port (macOS: cu.usbmodem*, Linux/WSL: ttyACM* or ttyUSB*)
+if [ -z "$SERIAL_PORT" ]; then
+  SERIAL_PORT=$(ls /dev/cu.usbmodem* /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | head -1)
+  if [ -z "$SERIAL_PORT" ]; then
+    echo "Error: No Arduino serial port found. Set SERIAL_PORT env var or plug in the Arduino."
+    exit 1
+  fi
+fi
 PID_FILE="$SCRIPT_DIR/.serial_daemon.pid"
 
 # Cleanup on exit

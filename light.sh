@@ -38,13 +38,16 @@ if [ -n "$SESSION_ID" ]; then
   echo "$SESSION_ID" > "$LAST_SESSION_FILE"
 fi
 
-# Look up group (default to 1)
-GROUP=1
+# Look up group (unregistered sessions are ignored)
+GROUP=""
 if [ -n "$SESSION_ID" ] && [ -f "$MAP_FILE" ]; then
-  MAPPED=$(grep "^$SESSION_ID " "$MAP_FILE" | awk '{print $2}')
-  if [ -n "$MAPPED" ]; then
-    GROUP="$MAPPED"
-  fi
+  GROUP=$(grep "^$SESSION_ID " "$MAP_FILE" | awk '{print $2}')
+fi
+
+# Skip unregistered sessions
+if [ -z "$GROUP" ]; then
+  echo "$TIMESTAMP [--] ⚫ SKIP ($STATUS) [$EVENT] sid=${SESSION_ID:0:8}" >> "$LOG_FILE"
+  exit 0
 fi
 
 # Map status to command char
