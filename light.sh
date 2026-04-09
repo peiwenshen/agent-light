@@ -2,13 +2,14 @@
 # agent-light: multi-session status light for Claude Code
 # Usage: ./light.sh [status] [event]
 # Reads session_id from hook stdin JSON to route to correct LED group.
+# Set AGENT_LIGHT_DEBUG=1 to enable logging to light.log
 
 SCRIPT_DIR="$(dirname "$0")"
-LOG_FILE="$SCRIPT_DIR/light.log"
 MAP_FILE="$SCRIPT_DIR/.session_map"
 LAST_SESSION_FILE="$SCRIPT_DIR/.last_session"
 FIFO="$SCRIPT_DIR/.serial_fifo"
-TIMESTAMP=$(date '+%H:%M:%S')
+
+log() { [ "${AGENT_LIGHT_DEBUG:-}" = "1" ] && echo "$(date '+%H:%M:%S') $*" >> "$SCRIPT_DIR/light.log"; }
 
 STATUS="${1:-}"
 EVENT="${2:-direct}"
@@ -46,7 +47,7 @@ fi
 
 # Skip unregistered sessions
 if [ -z "$GROUP" ]; then
-  echo "$TIMESTAMP [--] ⚫ SKIP ($STATUS) [$EVENT] sid=${SESSION_ID:0:8}" >> "$LOG_FILE"
+  log "[--] ⚫ SKIP ($STATUS) [$EVENT] sid=${SESSION_ID:0:8}"
   exit 0
 fi
 
@@ -59,8 +60,7 @@ case "$STATUS" in
   *)       ICON="⚫"; LABEL="OFF";     CMD="O" ;;
 esac
 
-# Log with group and session info
-echo "$TIMESTAMP [G$GROUP] $ICON $LABEL ($STATUS) [$EVENT] sid=${SESSION_ID:0:8}" >> "$LOG_FILE"
+log "[G$GROUP] $ICON $LABEL ($STATUS) [$EVENT] sid=${SESSION_ID:0:8}"
 
 # Send to Arduino via FIFO: group number + command
 if [ -p "$FIFO" ]; then

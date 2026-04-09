@@ -75,7 +75,9 @@ The serial port is auto-detected. To override: `SERIAL_PORT=/dev/ttyACM0 ./seria
 
 ### 4. Configure Claude Code hooks
 
-Add the following hooks to your Claude Code settings (`~/.claude/settings.json`). Replace `AGENT_LIGHT_DIR` with the absolute path to this repo (e.g., `/home/you/agent-light`).
+Add hooks to `~/.claude/settings.json` so the light responds to Claude Code events globally (works in any project). If the file already exists, merge the `hooks` key into it.
+
+Replace `AGENT_LIGHT_DIR` below with the **absolute path** to this repo (e.g., `/home/you/agent-light` or `/Users/you/agent-light`).
 
 ```json
 {
@@ -149,23 +151,23 @@ Add the following hooks to your Claude Code settings (`~/.claude/settings.json`)
 }
 ```
 
-### 5. Register sessions
+### 5. Install the `/register` skill (optional)
+
+```bash
+ln -s "$(pwd)/skill/register" ~/.claude/skills/register
+```
+
+### 6. Register sessions
 
 Each Claude Code session must be registered to an LED group (1-4). Unregistered sessions are ignored.
 
 In a Claude Code session, send any message first (so the session ID is captured), then:
 
-```bash
-./register.sh 1    # Assign to Group 1
+```
+/register 1    # Assign to Group 1
 ```
 
-### 6. Install the `/register` skill (optional)
-
-A Claude Code skill is included so you can register with `/register <1-4>` instead of running the script manually.
-
-```bash
-ln -s "$(pwd)/skill/register" ~/.claude/skills/register
-```
+Or run the script directly: `./register.sh 1`
 
 ## How it works
 
@@ -189,13 +191,15 @@ Claude Code hook → light.sh → FIFO → serial_daemon.sh → Arduino → LED
 | `arduino/test_leds/` | Hardware test sketch (cycles all 12 LEDs) |
 | `settings.example.json` | Claude Code hook configuration (reference) |
 | `skill/register/` | Claude Code `/register` skill |
-| `status.sh` | Terminal UI status display |
-| `watch.sh` | Simple log tail |
+| `status.sh` | Terminal UI status display (debug) |
+| `watch.sh` | Simple log tail (debug) |
 
 ## Debugging
 
+Logging is off by default. To enable, set `AGENT_LIGHT_DEBUG=1` in the hook commands (e.g., `AGENT_LIGHT_DEBUG=1 /path/to/light.sh running PreToolUse`).
+
 ```bash
-# Watch events in real-time
+# Watch events in real-time (requires debug mode)
 tail -f light.log
 
 # Test LEDs manually (while daemon is running)
