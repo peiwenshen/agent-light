@@ -1,23 +1,25 @@
-int red = 10;
-int yellow = 9;
-int green = 8;
+const int GROUP_PINS[4][3] = {
+  {4, 3, 2},    // Group 1
+  {7, 6, 5},    // Group 2
+  {10, 9, 8},   // Group 3
+  {13, 12, 11}  // Group 4
+};
 
 void setup() {
-  pinMode(red, OUTPUT);
-  pinMode(yellow, OUTPUT);
-  pinMode(green, OUTPUT);
+  for (int g = 0; g < 4; g++) {
+    for (int i = 0; i < 3; i++) {
+      pinMode(GROUP_PINS[g][i], OUTPUT);
+      digitalWrite(GROUP_PINS[g][i], LOW);
+    }
+  }
 }
 
 void loop() {
-  digitalWrite(red, HIGH);
-  delay(500);
-  digitalWrite(red, LOW);
-
-  digitalWrite(yellow, HIGH);
-  delay(500);
-  digitalWrite(yellow, LOW);
-
-  digitalWrite(green, HIGH);
-  delay(500);
-  digitalWrite(green, LOW);
+  for (int g = 0; g < 4; g++) {
+    for (int i = 0; i < 3; i++) {
+      digitalWrite(GROUP_PINS[g][i], HIGH);
+      delay(300);
+      digitalWrite(GROUP_PINS[g][i], LOW);
+    }
+  }
 }

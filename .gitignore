@@ -1,1 +1,6 @@
 light.log
+.serial_fifo
+.serial_daemon.pid
+.serial.lock
+.last_session
+.session_map

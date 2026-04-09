@@ -1,41 +1,65 @@
 #!/bin/bash
-# agent-light: simulate status light in terminal
-# Usage: ./light.sh [status]
-# Statuses: running, done, waiting, error, off
-# When called without args, reads hook event JSON from stdin to auto-detect status.
+# agent-light: multi-session status light for Claude Code
+# Usage: ./light.sh [status] [event]
+# Reads session_id from hook stdin JSON to route to correct LED group.
 
 SCRIPT_DIR="$(dirname "$0")"
 LOG_FILE="$SCRIPT_DIR/light.log"
+MAP_FILE="$SCRIPT_DIR/.session_map"
+LAST_SESSION_FILE="$SCRIPT_DIR/.last_session"
+FIFO="$SCRIPT_DIR/.serial_fifo"
 TIMESTAMP=$(date '+%H:%M:%S')
 
 STATUS="${1:-}"
 EVENT="${2:-direct}"
+SESSION_ID=""
 
-if [ -z "$STATUS" ]; then
-  # Read hook event from stdin JSON
+# Read hook JSON from stdin (non-blocking)
+if [ ! -t 0 ]; then
   INPUT=$(cat)
-  EVENT=$(echo "$INPUT" | grep -o '"hook_event_name":"[^"]*"' | head -1 | cut -d'"' -f4)
-  case "$EVENT" in
-    PreToolUse)    STATUS="running" ;;
-    Stop)          STATUS="done"    ;;
-    Notification)  STATUS="waiting" ;;
-    *)             STATUS="off"     ;;
-  esac
+  SESSION_ID=$(echo "$INPUT" | grep -o '"session_id":"[^"]*"' | head -1 | cut -d'"' -f4)
+  if [ -z "$STATUS" ]; then
+    EVENT=$(echo "$INPUT" | grep -o '"hook_event_name":"[^"]*"' | head -1 | cut -d'"' -f4)
+    case "$EVENT" in
+      UserPromptSubmit)  STATUS="running" ;;
+      PreToolUse)        STATUS="running" ;;
+      PostToolUse)       STATUS="running" ;;
+      Stop)              STATUS="done"    ;;
+      Notification)      STATUS="waiting" ;;
+      PermissionRequest) STATUS="waiting" ;;
+      StopFailure)       STATUS="waiting" ;;
+      *)                 STATUS="off"     ;;
+    esac
+  fi
 fi
 
+# Save last seen session for registration
+if [ -n "$SESSION_ID" ]; then
+  echo "$SESSION_ID" > "$LAST_SESSION_FILE"
+fi
+
+# Look up group (default to 1)
+GROUP=1
+if [ -n "$SESSION_ID" ] && [ -f "$MAP_FILE" ]; then
+  MAPPED=$(grep "^$SESSION_ID " "$MAP_FILE" | awk '{print $2}')
+  if [ -n "$MAPPED" ]; then
+    GROUP="$MAPPED"
+  fi
+fi
+
+# Map status to command char
 case "$STATUS" in
-  running) ICON="🔵"; LABEL="RUNNING"; CMD="R" ;;
+  running) ICON="🔴"; LABEL="RUNNING"; CMD="R" ;;
   done)    ICON="🟢"; LABEL="DONE";    CMD="G" ;;
   waiting) ICON="🟡"; LABEL="WAITING"; CMD="Y" ;;
   error)   ICON="🔴"; LABEL="ERROR";   CMD="R" ;;
   *)       ICON="⚫"; LABEL="OFF";     CMD="O" ;;
 esac
 
-# Log to file (hooks run in background, can't see stdout)
-echo "$TIMESTAMP $ICON $LABEL ($STATUS) [$EVENT]" >> "$LOG_FILE"
+# Log with group and session info
+echo "$TIMESTAMP [G$GROUP] $ICON $LABEL ($STATUS) [$EVENT] sid=${SESSION_ID:0:8}" >> "$LOG_FILE"
 
-# Send to Arduino via FIFO (serial_daemon.sh keeps port open)
-FIFO="$SCRIPT_DIR/.serial_fifo"
+# Send to Arduino via FIFO: group number + command
 if [ -p "$FIFO" ]; then
-  echo "$CMD" > "$FIFO"
+  echo "${GROUP}${CMD}" > "$FIFO"
 fi
