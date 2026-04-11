@@ -66,10 +66,13 @@ log "[G$GROUP] $ICON $LABEL ($STATUS) [$EVENT] sid=${SESSION_ID:0:8}"
 STATE_FILE="$SCRIPT_DIR/.group_state"
 touch "$STATE_FILE"
 # Atomic update: replace the line for this group
+NEW_LINE="$GROUP:$CMD:$STATUS:$EVENT:$(date '+%m-%d %H:%M:%S'):${SESSION_ID:0:8}"
 if grep -q "^$GROUP:" "$STATE_FILE" 2>/dev/null; then
-  sed -i'' "s/^$GROUP:.*/$GROUP:$CMD:$STATUS:$EVENT:$(date '+%m-%d %H:%M:%S'):${SESSION_ID:0:8}/" "$STATE_FILE"
+  grep -v "^$GROUP:" "$STATE_FILE" > "$STATE_FILE.tmp"
+  echo "$NEW_LINE" >> "$STATE_FILE.tmp"
+  mv "$STATE_FILE.tmp" "$STATE_FILE"
 else
-  echo "$GROUP:$CMD:$STATUS:$EVENT:$(date '+%m-%d %H:%M:%S'):${SESSION_ID:0:8}" >> "$STATE_FILE"
+  echo "$NEW_LINE" >> "$STATE_FILE"
 fi
 
 # Send to Arduino via FIFO: group number + command
