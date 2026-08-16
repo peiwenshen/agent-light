@@ -1,19 +1,11 @@
 {
-  "permissions": {
-    "allow": [
-      "WebFetch",
-      "WebSearch"
-    ]
-  },
-  "skipDangerousModePermissionPrompt": true,
-  "effortLevel": "high",
   "hooks": {
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh running UserPromptSubmit",
+            "command": "AGENT_LIGHT_DIR/light.sh running UserPromptSubmit",
             "async": true
           }
         ]
@@ -25,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh running PreToolUse",
+            "command": "AGENT_LIGHT_DIR/light.sh running PreToolUse",
             "async": true
           }
         ]
@@ -37,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh running PostToolUse",
+            "command": "AGENT_LIGHT_DIR/light.sh running PostToolUse",
             "async": true
           }
         ]
@@ -48,17 +40,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh done Stop"
+            "command": "AGENT_LIGHT_DIR/light.sh done Stop"
           }
         ]
       }
     ],
-"PermissionRequest": [
+    "PermissionRequest": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh waiting PermissionRequest"
+            "command": "AGENT_LIGHT_DIR/light.sh waiting PermissionRequest"
           }
         ]
       }
@@ -68,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/shenpeiwen/Desktop/Code/side/agent-light/light.sh waiting StopFailure"
+            "command": "AGENT_LIGHT_DIR/light.sh waiting StopFailure"
           }
         ]
       }

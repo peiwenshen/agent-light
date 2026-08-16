@@ -10,6 +10,12 @@ Physical LED status light for Claude Code. Shows what Claude is doing in real-ti
 
 Supports up to 4 concurrent sessions, each with its own LED group.
 
+## Demo
+
+[Demo video](./demo.mov)
+
+The board turns agent hook events into ambient physical status: running, waiting, or done.
+
 ## Hardware
 
 - Arduino UNO R3 (ELEGOO compatible)
